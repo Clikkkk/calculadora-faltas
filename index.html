@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e8ecf2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1424" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Apunta tus faltas en cada módulo de DAM y mira cuántas clases te quedan antes de perder la evaluación continua.">
+<title>Calculadora de Faltas — DAM</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ffd23f'/%3E%3Cpath d='M9 8v16M14 8v16M19 8v16M24 8v16M6 22L27 10' stroke='%2314213d' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#e8ecf2;--sheet:#ffffff;--sheet2:#f2f5f9;--ink:#14213d;--ink2:#56627a;--rule:#d5dce6;
+  --mark:#ffd23f;--mark-ink:#14213d;--ok:#1f9d74;--warn:#e08a00;--bad:#e5383b;
+  --cell:#e3e8ef;--shadow:0 1px 0 rgba(20,33,61,.06),0 8px 24px -12px rgba(20,33,61,.25);
+  --r-lg:22px;--r-md:14px;--r-sm:10px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0d1424;--sheet:#151f35;--sheet2:#1c2742;--ink:#eef2f8;--ink2:#94a1bb;--rule:#26324f;
+    --mark:#ffd23f;--mark-ink:#14213d;--ok:#3ccf9b;--warn:#ffad33;--bad:#ff5a5f;
+    --cell:#24304d;--shadow:0 1px 0 rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--paper);color:var(--ink);font:400 16px/1.5 Figtree,system-ui,sans-serif;
+  min-height:100vh;padding:calc(20px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color:transparent;
+  background-image:linear-gradient(var(--rule) 1px,transparent 1px);background-size:100% 32px;background-position:0 -1px;
+  background-attachment:fixed;
+}
+@media (prefers-color-scheme:dark){body{background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px)}}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--mark);outline-offset:2px;border-radius:8px}
+.wrap{max-width:620px;margin:0 auto}
+
+/* cabecera */
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
+.logo{display:flex;flex-direction:column}
+.where{font-size:14px;color:var(--ink2);font-weight:500}
+h1{font:800 clamp(38px,11vw,58px)/.9 'Bricolage Grotesque',sans-serif;letter-spacing:-.04em;margin-top:6px}
+h1 .hl{background:linear-gradient(transparent 58%,var(--mark) 58%,var(--mark) 92%,transparent 92%);padding:0 4px;margin:0 -4px;color:var(--ink)}
+.tally{display:inline-block;width:46px;height:46px;flex:none}
+
+/* resumen */
+.panel{background:var(--ink);color:var(--paper);border-radius:var(--r-lg);padding:18px;margin-bottom:16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+@media (prefers-color-scheme:dark){.panel{background:var(--mark);color:var(--mark-ink)}}
+.panel-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.panel-big{font:800 56px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-.03em}
+.panel-lbl{font-size:14px;opacity:.75;margin-top:4px;max-width:22ch}
+.panel-side{text-align:right;font-size:14px;line-height:1.35}
+.panel-side b{display:block;font:700 22px/1.1 'Bricolage Grotesque',sans-serif}
+.panel-warn{margin-top:14px;padding-top:12px;border-top:1px solid color-mix(in srgb,currentColor 20%,transparent);font-size:14px;display:flex;gap:8px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+
+/* filtros */
+.bar{display:flex;gap:10px;align-items:center;margin:0 -16px 6px;padding:10px 16px 14px;position:sticky;top:env(safe-area-inset-top);z-index:5;background:linear-gradient(var(--paper) 75%,transparent)}
+.seg{display:flex;background:var(--sheet);border-radius:999px;padding:4px;box-shadow:var(--shadow);flex:1}
+.seg button{flex:1;border:0;background:none;padding:9px 6px;border-radius:999px;font-weight:600;font-size:14px;cursor:pointer;color:var(--ink2);transition:background .2s,color .2s}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+@media (prefers-color-scheme:dark){.seg button[aria-pressed=true]{background:var(--mark);color:var(--mark-ink)}}
+.sort{border:0;background:var(--sheet);box-shadow:var(--shadow);border-radius:999px;padding:9px 14px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+
+/* tarjetas */
+.group{font:700 15px 'Bricolage Grotesque',sans-serif;color:var(--ink2);margin:22px 4px 10px;display:flex;justify-content:space-between}
+.group:first-child{margin-top:4px}
+.list{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--sheet);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:16px 16px 14px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:0 4px 4px 0;background:var(--c)}
+.card.lost{background:color-mix(in srgb,var(--bad) 8%,var(--sheet))}
+.head{display:flex;gap:12px;align-items:flex-start}
+.title{flex:1;min-width:0}
+.code{font-size:13px;color:var(--ink2);font-weight:500}
+.name{font:700 18px/1.2 'Bricolage Grotesque',sans-serif;letter-spacing:-.01em;margin-top:2px;overflow-wrap:anywhere}
+.x{border:0;background:none;width:32px;height:32px;margin:-6px -8px 0 0;border-radius:50%;cursor:pointer;color:var(--ink2);display:grid;place-items:center;flex:none}
+.x:hover{background:var(--sheet2);color:var(--bad)}
+.x svg{width:16px;height:16px}
+
+.mid{display:flex;align-items:flex-end;gap:14px;margin:14px 0 12px}
+.num{font:800 54px/.82 'Bricolage Grotesque',sans-serif;letter-spacing:-.04em;color:var(--c);font-variant-numeric:tabular-nums}
+.num small{font-size:24px;letter-spacing:-.02em}
+.num-lbl{font-size:14px;color:var(--ink2);line-height:1.25;padding-bottom:2px}
+.num-lbl b{display:block;color:var(--ink);font-weight:600}
+
+/* cartilla de faltas */
+.punch{display:grid;grid-template-columns:repeat(auto-fill,minmax(14px,1fr));gap:4px}
+.punch i{aspect-ratio:1;border-radius:4px;background:var(--cell);display:block;position:relative}
+.punch i.on{background:var(--c)}
+.punch i.over{background:var(--bad);opacity:.55}
+.punch i.on.new{animation:stamp .35s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stamp{0%{transform:scale(1.9);opacity:0}100%{transform:scale(1);opacity:1}}
+
+.foot{display:flex;align-items:center;gap:8px;margin-top:14px}
+.chipbtn{border:0;background:var(--sheet2);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
+.chipbtn:hover{background:var(--rule)}
+.counter{margin-left:auto;display:flex;align-items:center;background:var(--sheet2);border-radius:999px;padding:4px}
+.counter button{width:42px;height:42px;border:0;border-radius:50%;background:none;cursor:pointer;display:grid;place-items:center}
+.counter button svg{width:18px;height:18px}
+.counter button.add{background:var(--ink);color:var(--paper)}
+@media (prefers-color-scheme:dark){.counter button.add{background:var(--mark);color:var(--mark-ink)}}
+.counter button:active{transform:scale(.92)}
+.counter .n{min-width:38px;text-align:center;font:700 18px 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums}
+
+.more{margin-top:12px;border-top:1px dashed var(--rule);padding-top:10px}
+.more summary{cursor:pointer;list-style:none;font-size:14px;color:var(--ink2);font-weight:500;display:flex;align-items:center;gap:6px}
+.more summary::-webkit-details-marker{display:none}
+.more summary svg{width:14px;height:14px;transition:transform .2s}
+.more[open] summary svg{transform:rotate(90deg)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.stats div{background:var(--sheet2);border-radius:var(--r-sm);padding:8px 10px;font:700 16px 'Bricolage Grotesque',sans-serif}
+.stats small{display:block;font:500 12px Figtree,sans-serif;color:var(--ink2)}
+@media (max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}}
+.hist{list-style:none;margin-top:10px;display:flex;flex-direction:column}
+.hist li{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;border-bottom:1px solid var(--rule);font-size:14px;gap:8px}
+.hist li:last-child{border-bottom:0}
+.hist .when{font-weight:600}
+.hist .note{color:var(--ink2)}
+.hist button{border:0;background:none;color:var(--ink2);cursor:pointer;font-size:13px;font-weight:600;padding:4px 6px;border-radius:6px}
+.hist button:hover{color:var(--bad)}
+.hist .none{color:var(--ink2)}
+
+.empty{text-align:center;padding:40px 20px;background:var(--sheet);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.empty h3{font:700 20px 'Bricolage Grotesque',sans-serif;margin-bottom:6px}
+.empty p{color:var(--ink2);margin-bottom:16px}
+
+/* pie */
+.tools{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:28px}
+.tools .chipbtn{background:var(--sheet);box-shadow:var(--shadow)}
+.note{font-size:13px;color:var(--ink2);text-align:center;margin:18px auto 0;max-width:46ch;line-height:1.5}
+
+/* botón flotante */
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));z-index:8;border:0;border-radius:999px;padding:15px 22px;background:var(--mark);color:var(--mark-ink);font:700 16px Figtree,sans-serif;cursor:pointer;box-shadow:0 10px 30px -8px rgba(20,33,61,.45);display:flex;white-space:nowrap;align-items:center;gap:8px}
+.fab svg{width:18px;height:18px}
+.fab:active{transform:translateX(-50%) scale(.96)}
+
+/* hojas modales */
+.modal{position:fixed;inset:0;background:rgba(10,16,30,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal.open{display:flex}
+.sheet{background:var(--sheet);border-radius:26px 26px 0 0;width:100%;max-width:620px;padding:10px 18px calc(22px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;animation:up .28s cubic-bezier(.2,.9,.3,1)}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.grab{width:40px;height:5px;border-radius:9px;background:var(--rule);margin:2px auto 14px}
+@media (min-width:640px){.modal{align-items:center}.sheet{border-radius:26px}.grab{display:none}}
+.sheet h2{font:800 26px/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em;margin-bottom:4px}
+.sheet .hint{color:var(--ink2);font-size:14px;margin-bottom:6px}
+label{display:block;font-size:14px;font-weight:600;margin:16px 0 8px}
+input[type=text],input[type=number],input[type=date]{width:100%;background:var(--sheet2);border:2px solid transparent;border-radius:var(--r-md);padding:13px 14px;color:var(--ink);font:500 16px Figtree,sans-serif;transition:border-color .15s}
+input:focus{outline:none;border-color:var(--ink)}
+@media (prefers-color-scheme:dark){input:focus{border-color:var(--mark)}}
+input[type=date]{color-scheme:light dark}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.opt{border:0;padding:8px 13px;border-radius:999px;background:var(--sheet2);font-weight:600;font-size:14px;cursor:pointer}
+.opt.on{background:var(--ink);color:var(--paper)}
+@media (prefers-color-scheme:dark){.opt.on{background:var(--mark);color:var(--mark-ink)}}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:48px;height:48px;border-radius:14px;border:0;background:var(--sheet2);font-size:22px;font-weight:700;cursor:pointer}
+.stepper input{text-align:center;font:700 22px 'Bricolage Grotesque',sans-serif}
+.actions{display:flex;gap:8px;margin-top:24px}
+.btn{flex:1;border:0;border-radius:var(--r-md);padding:15px;font:700 16px Figtree,sans-serif;cursor:pointer;background:var(--sheet2)}
+.btn.main{background:var(--ink);color:var(--paper)}
+@media (prefers-color-scheme:dark){.btn.main{background:var(--mark);color:var(--mark-ink)}}
+.btn.del{flex:0 0 auto;color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:12px;font-weight:600;font-size:14px;transition:.25s;z-index:30;display:flex;gap:12px;align-items:center;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;background:none;color:var(--mark);font-weight:700;cursor:pointer}
+@media (prefers-color-scheme:dark){.toast{background:var(--mark);color:var(--mark-ink)}.toast button{color:var(--mark-ink);text-decoration:underline}}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <span class="where">DAM · La Salle Gràcia · curso 2026-27</span>
+      <h1>Mis <span class="hl">faltas</span></h1>
+    </div>
+    <svg class="tally" viewBox="0 0 46 46" aria-hidden="true"><g stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M10 9v28M17 9v28M24 9v28M31 9v28"/><path d="M5 33L38 12" stroke="var(--bad)"/></g></svg>
+  </header>
+
+  <section class="panel" id="panel" aria-live="polite"></section>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Filtrar por curso">
+      <button data-f="all" aria-pressed="true">Todos</button>
+      <button data-f="1r" aria-pressed="false">1r</button>
+      <button data-f="2n" aria-pressed="false">2n</button>
+    </div>
+    <button class="sort" id="sortBtn" aria-label="Cambiar orden">Por curso</button>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="tools">
+    <button class="chipbtn" id="damBtn">Recuperar módulos DAM</button>
+    <button class="chipbtn" id="exportBtn">Exportar copia</button>
+    <button class="chipbtn" id="importBtn">Importar copia</button>
+    <button class="chipbtn" id="shareBtn">Compartir</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+  </div>
+  <p class="note">Todo se guarda en este navegador. Exporta una copia si cambias de móvil.<br>Cálculo orientativo: confirma el límite de cada módulo con tu tutor.</p>
+</div>
+
+<button class="fab" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Añadir asignatura</button>
+
+<!-- hoja asignatura -->
+<div class="modal" id="subjModal" role="dialog" aria-modal="true" aria-labelledby="subjTitle">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="subjTitle">Nueva asignatura</h2>
+    <label for="fName">Nombre</label>
+    <input type="text" id="fName" placeholder="Ej. Programació" maxlength="60" autocomplete="off">
+    <label for="fHours">Horas en el centro</label>
+    <div class="opts" data-for="fHours" data-vals="33,66,99,132,198"></div>
+    <input type="number" id="fHours" min="1" step="1" inputmode="numeric">
+    <label for="fDur">Horas por clase</label>
+    <div class="opts" data-for="fDur" data-vals="1,1.5,2,3"></div>
+    <input type="number" id="fDur" min="0.25" step="0.25" inputmode="decimal">
+    <label for="fLimit">Límite de faltas (%)</label>
+    <div class="opts" data-for="fLimit" data-vals="15,20,25,30"></div>
+    <input type="number" id="fLimit" min="1" max="100" step="1" inputmode="numeric">
+    <div class="actions">
+      <button class="btn del" id="delSubj" hidden>Quitar</button>
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn main" id="saveSubj">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- hoja falta -->
+<div class="modal" id="absModal" role="dialog" aria-modal="true" aria-labelledby="absTitle">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="absTitle">Apuntar falta</h2>
+    <p class="hint" id="absSubj"></p>
+    <label for="aDate">Día</label>
+    <input type="date" id="aDate">
+    <label for="aCount">Clases faltadas</label>
+    <div class="stepper">
+      <button type="button" data-step="-1" aria-label="Una menos">−</button>
+      <input type="number" id="aCount" min="1" step="1" value="1" inputmode="numeric">
+      <button type="button" data-step="1" aria-label="Una más">+</button>
+    </div>
+    <label for="aNote">Nota <span style="font-weight:400;color:var(--ink2)">(opcional)</span></label>
+    <input type="text" id="aNote" placeholder="Médico, justificada…" maxlength="60" autocomplete="off">
+    <div class="actions">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn main" id="saveAbs">Apuntar falta</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"><span id="toastMsg"></span><button id="toastUndo" hidden>Deshacer</button></div>
+
+<script>
+const KEY='calcfaltas_v1',UI_KEY='calcfaltas_ui';
+let state={subjects:[]},memoryOnly=false;
+let ui={filter:'all',sort:'curso'};
+let lastAdded=null;
+
+// Módulos DAM La Salle Gràcia 2026-27 (solo horas en el centro)
+const DAM=[
+ ['1r','0373','Llenguatges de marques i sistemes de gestió d’informació',66],
+ ['1r','0483','Sistemes informàtics',99],
+ ['1r','0484','Bases de dades',132],
+ ['1r','0485','Programació',198],
+ ['1r','0487','Entorns de desenvolupament',66],
+ ['1r','0491','Sistemes de gestió empresarial',66],
+ ['1r','0179','Anglès professional',66],
+ ['1r','1665','Digitalització aplicada als sectors productius',33],
+ ['1r','1708','Sostenibilitat aplicada al sistema productiu',33],
+ ['1r','1709','Itinerari personal per a l’ocupabilitat I',99],
+ ['2n','0486','Accés a dades',66],
+ ['2n','0488','Desenvolupament d’interfícies',66],
+ ['2n','0489','Programació multimèdia i dispositius mòbils',66],
+ ['2n','0490','Programació de serveis i processos',66],
+ ['2n','1710','Itinerari personal per a l’ocupabilitat II',66],
+ ['2n','0616','Projecte intermodular de desenvolupament d’aplicacions web',198],
+ ['2n','OPT','Optatiu: Machine Learning',66],
+ ['2n','OPT2','Optatiu: Programació Híbrida',33]
+];
+function addDam(){
+  let n=0;
+  DAM.forEach(([curso,code,name,hours])=>{
+    if(state.subjects.some(s=>s.code===code))return;
+    state.subjects.push({id:uid(),code,curso,name,hours,dur:1,limit:20,absences:[]});n++;
+  });
+  return n;
+}
+function load(){
+  let raw=null;
+  try{raw=localStorage.getItem(KEY);if(raw)state=JSON.parse(raw);}catch(e){memoryOnly=true;}
+  if(!state||!Array.isArray(state.subjects))state={subjects:[]};
+  if(!raw){addDam();save();}
+  try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'null');if(u)ui=Object.assign(ui,u);}catch(e){}
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){memoryOnly=true;}}
+function saveUi(){try{localStorage.setItem(UI_KEY,JSON.stringify(ui));}catch(e){}}
+
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const fmt=n=>(Math.round(n*10)/10).toLocaleString('es-ES');
+const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pl=(n,a,b)=>n===1?a:b;
+const ICON={
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  minus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'
+};
+
+function calc(s){
+  const classes=s.absences.reduce((a,b)=>a+b.count,0);
+  const maxHours=s.hours*s.limit/100;
+  const maxClasses=Math.floor(maxHours/s.dur+1e-9);
+  const usedHours=classes*s.dur;
+  const left=maxClasses-classes;
+  const pct=maxHours?usedHours/maxHours:0;
+  let st;
+  if(usedHours>maxHours+1e-9) st={k:'lost',t:'Evaluación perdida',c:'var(--bad)',rank:0};
+  else if(left<=1||pct>=.8) st={k:'danger',t:'Al límite',c:'var(--bad)',rank:1};
+  else if(pct>=.5) st={k:'warn',t:'Cuidado',c:'var(--warn)',rank:2};
+  else st={k:'ok',t:'Vas bien',c:'var(--ok)',rank:3};
+  return {classes,maxHours,maxClasses,usedHours,left,pct,st,hoursLeft:Math.max(maxHours-usedHours,0)};
+}
+
+function renderPanel(){
+  const subs=state.subjects,rs=subs.map(s=>({s,r:calc(s)}));
+  const total=rs.reduce((a,x)=>a+x.r.classes,0);
+  const risk=rs.filter(x=>x.r.st.rank<=2);
+  const lost=rs.filter(x=>x.r.st.k==='lost').length;
+  const worst=[...rs].filter(x=>x.r.classes>0).sort((a,b)=>b.r.pct-a.r.pct)[0];
+  let msg;
+  if(!subs.length) msg='<span class="dot" style="background:currentColor;opacity:.5"></span>Añade tus módulos para empezar.';
+  else if(lost) msg=`<span class="dot" style="background:var(--bad)"></span>Has perdido la evaluación continua en ${lost} ${pl(lost,'módulo','módulos')}.`;
+  else if(risk.length) msg=`<span class="dot" style="background:var(--warn)"></span>${risk.length} ${pl(risk.length,'módulo necesita','módulos necesitan')} que vigiles las faltas.`;
+  else msg='<span class="dot" style="background:var(--ok)"></span>Vas bien en todos los módulos.';
+  document.getElementById('panel').innerHTML=`
+    <div class="panel-top">
+      <div><div class="panel-big">${total}</div><div class="panel-lbl">${pl(total,'clase faltada','clases faltadas')} este curso</div></div>
+      <div class="panel-side">${worst?`<b>${worst.r.st.k==='lost'?'Perdida':worst.r.left}</b>${worst.r.st.k==='lost'?'en ':pl(worst.r.left,'clase te queda en ','clases te quedan en ')}${esc(shortName(worst.s.name))}`:`<b>${subs.length}</b>${pl(subs.length,'módulo','módulos')}`}</div>
+    </div>
+    <div class="panel-warn">${msg}</div>`;
+}
+function shortName(n){return n.length>28?n.slice(0,26).trim()+'…':n}
+
+function card(s){
+  const r=calc(s);
+  const cells=Math.max(r.maxClasses,0),over=Math.max(r.classes-cells,0);
+  let punch='';
+  for(let i=0;i<cells;i++)punch+=`<i class="${i<r.classes?'on':''}${lastAdded===s.id&&i===r.classes-1?' new':''}"></i>`;
+  for(let i=0;i<over;i++)punch+='<i class="over"></i>';
+  const hist=[...s.absences].sort((a,b)=>b.date.localeCompare(a.date)).map(a=>
+    `<li><span><span class="when">${new Date(a.date+'T00:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}</span> · ${a.count} ${pl(a.count,'clase','clases')}${a.note?` <span class="note">· ${esc(a.note)}</span>`:''}</span>
+     <button data-act="delAbs" data-s="${s.id}" data-a="${a.id}">Borrar</button></li>`).join('');
+  const big=r.st.k==='lost'
+    ?`<div class="num">+${fmt(r.usedHours-r.maxHours)}<small>h</small></div><div class="num-lbl"><b>Te has pasado</b>del límite del ${fmt(s.limit)} %</div>`
+    :`<div class="num">${r.left}</div><div class="num-lbl"><b>${pl(r.left,'clase puedes faltar','clases puedes faltar')}</b>${r.st.t} · ${r.classes} de ${r.maxClasses} usadas</div>`;
+  return `<article class="card ${r.st.k}" style="--c:${r.st.c}" aria-label="${esc(s.name)}">
+    <div class="head">
+      <div class="title"><div class="code">${s.code&&!s.code.startsWith('OPT')?'MP '+s.code+' · ':''}${fmt(s.hours)} h${s.dur!==1?' · '+fmt(s.dur)+' h/clase':''}${s.limit!==20?' · límite '+fmt(s.limit)+' %':''}</div>
+        <h3 class="name">${esc(s.name)}</h3></div>
+      <button class="x" data-act="del" data-s="${s.id}" aria-label="Quitar ${esc(s.name)}">${ICON.x}</button>
+    </div>
+    <div class="mid">${big}</div>
+    <div class="punch" aria-hidden="true">${punch}</div>
+    <div class="foot">
+      <button class="chipbtn" data-act="addDated" data-s="${s.id}">Otro día</button>
+      <button class="chipbtn" data-act="edit" data-s="${s.id}">Editar</button>
+      <div class="counter">
+        <button data-act="minus" data-s="${s.id}" aria-label="Quitar una falta">${ICON.minus}</button>
+        <span class="n" aria-label="Faltas">${r.classes}</span>
+        <button class="add" data-act="plus" data-s="${s.id}" aria-label="Apuntar falta hoy">${ICON.plus}</button>
+      </div>
+    </div>
+    <details class="more" data-s="${s.id}"${openSet.has(s.id)?' open':''}>
+      <summary>${ICON.chev}Detalle e historial · ${s.absences.length} ${pl(s.absences.length,'registro','registros')}</summary>
+      <div class="stats">
+        <div><small>Máx. faltas</small>${fmt(r.maxHours)} h</div>
+        <div><small>Máx. clases</small>${r.maxClasses}</div>
+        <div><small>Faltadas</small>${fmt(r.usedHours)} h</div>
+        <div><small>Te quedan</small>${fmt(r.hoursLeft)} h</div>
+      </div>
+      <ul class="hist">${hist||'<li class="none">Sin faltas. Así se hace.</li>'}</ul>
+    </details>
+  </article>`;
+}
+const openSet=new Set();
+
+function render(){
+  renderPanel();
+  const list=document.getElementById('list');
+  let subs=state.subjects.filter(s=>ui.filter==='all'||s.curso===ui.filter);
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===ui.filter));
+  document.getElementById('sortBtn').textContent=ui.sort==='curso'?'Por curso':'Por riesgo';
+  if(!state.subjects.length){
+    list.innerHTML=`<div class="empty"><h3>No tienes módulos</h3><p>Añade uno o recupera los de DAM.</p><button class="btn main" style="flex:none;padding:13px 20px" onclick="document.getElementById('damBtn').click()">Recuperar módulos DAM</button></div>`;
+  }else if(!subs.length){
+    list.innerHTML=`<div class="empty"><h3>Nada en ${ui.filter}</h3><p>No tienes módulos de este curso.</p></div>`;
+  }else if(ui.sort==='riesgo'){
+    subs=[...subs].sort((a,b)=>{const x=calc(a),y=calc(b);return x.st.rank-y.st.rank||y.pct-x.pct||x.left-y.left});
+    list.innerHTML=`<div class="list">${subs.map(card).join('')}</div>`;
+  }else{
+    const groups={};subs.forEach(s=>{const g=s.curso||'Otros';(groups[g]=groups[g]||[]).push(s)});
+    const order=['1r','2n','Otros'].filter(g=>groups[g]);
+    list.innerHTML=order.map(g=>`<div class="group"><span>${g==='Otros'?'Otros módulos':g==='1r'?'Primer curso':'Segundo curso'}</span><span>${groups[g].length}</span></div><div class="list">${groups[g].map(card).join('')}</div>`).join('');
+  }
+  lastAdded=null;
+}
+
+/* hojas */
+const subjModal=document.getElementById('subjModal'),absModal=document.getElementById('absModal');
+let editing=null,absTarget=null,lastFocus=null;
+function openM(m,focusEl){lastFocus=document.activeElement;m.classList.add('open');document.body.style.overflow='hidden';setTimeout(()=>(focusEl||m.querySelector('input'))?.focus(),60)}
+function closeM(m){m.classList.remove('open');document.body.style.overflow='';lastFocus?.focus?.()}
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{closeM(subjModal);closeM(absModal)});
+[subjModal,absModal].forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeM(m)}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeM(subjModal);closeM(absModal)}});
+
+document.querySelectorAll('.opts').forEach(c=>{
+  const input=document.getElementById(c.dataset.for);
+  c.innerHTML=c.dataset.vals.split(',').map(v=>`<button type="button" class="opt" data-v="${v}">${v.replace('.',',')}</button>`).join('');
+  c.onclick=e=>{const v=e.target.dataset.v;if(!v)return;input.value=v;syncOpts()};
+  input.addEventListener('input',syncOpts);
+});
+function syncOpts(){
+  document.querySelectorAll('.opts').forEach(c=>{
+    const v=parseFloat(document.getElementById(c.dataset.for).value);
+    c.querySelectorAll('.opt').forEach(o=>o.classList.toggle('on',parseFloat(o.dataset.v)===v));
+  });
+}
+function openSubj(s){
+  editing=s||null;
+  document.getElementById('subjTitle').textContent=s?'Editar asignatura':'Nueva asignatura';
+  document.getElementById('fName').value=s?s.name:'';
+  document.getElementById('fHours').value=s?s.hours:66;
+  document.getElementById('fDur').value=s?s.dur:1;
+  document.getElementById('fLimit').value=s?s.limit:20;
+  document.getElementById('delSubj').hidden=!s;
+  syncOpts();openM(subjModal);
+}
+document.getElementById('addBtn').onclick=()=>openSubj();
+document.getElementById('saveSubj').onclick=()=>{
+  const name=document.getElementById('fName').value.trim();
+  const hours=parseFloat(document.getElementById('fHours').value);
+  const dur=parseFloat(document.getElementById('fDur').value);
+  const limit=parseFloat(document.getElementById('fLimit').value);
+  if(!name){toast('Escribe el nombre de la asignatura');return}
+  if(!(hours>0&&dur>0&&limit>0&&limit<=100)){toast('Revisa horas, duración y límite');return}
+  const wasEditing=!!editing;
+  if(editing)Object.assign(editing,{name,hours,dur,limit});
+  else state.subjects.push({id:uid(),name,hours,dur,limit,absences:[],curso:ui.filter==='all'?'':ui.filter});
+  save();render();closeM(subjModal);toast(wasEditing?'Cambios guardados':'Asignatura añadida');
+};
+document.getElementById('delSubj').onclick=()=>{if(editing){const s=editing;closeM(subjModal);removeSubj(s)}};
+document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{const i=document.getElementById('aCount');i.value=Math.max(1,(parseInt(i.value)||1)+parseInt(b.dataset.step))});
+document.getElementById('saveAbs').onclick=()=>{
+  const date=document.getElementById('aDate').value||today();
+  const count=Math.max(1,parseInt(document.getElementById('aCount').value)||1);
+  const note=document.getElementById('aNote').value.trim();
+  absTarget.absences.push({id:uid(),date,count,note});lastAdded=absTarget.id;
+  save();render();closeM(absModal);toast(`${count} ${pl(count,'falta apuntada','faltas apuntadas')}`);
+};
+
+function removeSubj(s){
+  const idx=state.subjects.indexOf(s);
+  state.subjects.splice(idx,1);save();render();
+  toast(`Quitada: ${shortName(s.name)}`,()=>{state.subjects.splice(idx,0,s);save();render();});
+}
+
+document.getElementById('list').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const s=state.subjects.find(x=>x.id===b.dataset.s);if(!s)return;
+  const act=b.dataset.act;
+  if(act==='plus'){
+    s.absences.push({id:uid(),date:today(),count:1,note:''});lastAdded=s.id;save();render();
+    if(navigator.vibrate)navigator.vibrate(12);
+    const r=calc(s);
+    if(r.st.k==='lost')toast('Has superado el límite en este módulo');
+    else if(r.left===0)toast('No puedes faltar ni una clase más');
+  }
+  else if(act==='minus'){
+    if(!s.absences.length)return;
+    const last=[...s.absences].sort((a,b)=>a.date.localeCompare(b.date)).pop();
+    if(last.count>1)last.count--;else s.absences=s.absences.filter(a=>a!==last);
+    save();render();
+  }
+  else if(act==='edit')openSubj(s);
+  else if(act==='del')removeSubj(s);
+  else if(act==='addDated'){
+    absTarget=s;document.getElementById('absSubj').textContent=s.name;
+    document.getElementById('aDate').value=today();document.getElementById('aDate').max=today();
+    document.getElementById('aCount').value=1;document.getElementById('aNote').value='';
+    openM(absModal,document.getElementById('aDate'));
+  }
+  else if(act==='delAbs'){
+    const a=s.absences.find(x=>x.id===b.dataset.a);
+    s.absences=s.absences.filter(x=>x!==a);save();render();
+    toast('Falta borrada',()=>{s.absences.push(a);save();render();});
+  }
+});
+document.getElementById('list').addEventListener('toggle',e=>{
+  const d=e.target;if(!d.matches?.('details.more'))return;
+  d.open?openSet.add(d.dataset.s):openSet.delete(d.dataset.s);
+},true);
+
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ui.filter=b.dataset.f;saveUi();render()});
+document.getElementById('sortBtn').onclick=()=>{ui.sort=ui.sort==='curso'?'riesgo':'curso';saveUi();render()};
+
+/* herramientas */
+document.getElementById('damBtn').onclick=()=>{const n=addDam();save();render();toast(n?`${n} ${pl(n,'módulo recuperado','módulos recuperados')}`:'Ya tienes todos los módulos');};
+document.getElementById('exportBtn').onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`faltas-${today()}.json`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Copia descargada');
+};
+document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
+document.getElementById('importFile').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{
+    const d=JSON.parse(t);
+    if(!d||!Array.isArray(d.subjects))throw 0;
+    if(state.subjects.length&&!confirm('La copia sustituirá tus módulos actuales. ¿Importar?'))return;
+    state=d;save();render();toast('Copia importada');
+  }).catch(()=>toast('Este archivo no es una copia válida'));
+  e.target.value='';
+};
+document.getElementById('shareBtn').onclick=async()=>{
+  const data={title:'Calculadora de Faltas',text:'Apunta tus faltas de DAM y mira cuántas te quedan',url:location.href};
+  try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(location.href);toast('Enlace copiado');}}catch(e){}
+};
+
+let tt;
+function toast(m,undo){
+  const t=document.getElementById('toast'),u=document.getElementById('toastUndo');
+  document.getElementById('toastMsg').textContent=m;
+  u.hidden=!undo;u.onclick=()=>{undo&&undo();t.classList.remove('show');};
+  t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),undo?4500:2000);
+}
+
+load();render();
+if(memoryOnly)toast('Este navegador no deja guardar: se perderá al cerrar');
+</script>
+</body>
+</html>
