@@ -4,7 +4,7 @@
 <img src="https://img.shields.io/badge/curso-2026--27-ffd23f?style=for-the-badge&labelColor=14213d" alt="Curso 2026-27">
 <img src="https://img.shields.io/badge/deploy-Vercel-ffd23f?style=for-the-badge&logo=vercel&logoColor=white&labelColor=14213d" alt="Vercel">
 
-# 𝍸 Mis faltas
+# 📒 Mis faltas
 
 **Apunta tus faltas en cada módulo de DAM y mira cuántas clases te quedan antes de perder la evaluación continua.**
 
